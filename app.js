@@ -7,6 +7,7 @@ const cartItems = document.querySelector('.cart-items');
 const cartTotal = document.querySelector('.cart-total');
 const productsDOM = document.querySelector('.products-center');
 const cartContent = document.querySelector('.cart-content');
+const navIcon = document.querySelector('.nav-icon');
 
 //get products
 class Products {
@@ -65,9 +66,9 @@ class UI {
             <h5>${cart.price}</h5>
             <span class="remove-item" data-id="${cart.id}">remove</span>
           </div>
-          <div>
+          <div data-item="${cart.id}">
             <i class="fas fa-chevron-up"></i>
-            <p class="item-amount">1</p>
+            <p class="item-amount">${cart.count}</p>
             <i class="fas fa-chevron-down"></i>
           </div>
         </div>
@@ -95,18 +96,26 @@ class Storage {
   }
 }
 
-
 //Toggle Cart Content  function
 function toggleCart (visibility, transform ) {
   cartOverLay.style.visibility = visibility;
   cartDOM.style.transform = transform;
 }
 
-//Remove products From Carts
-function removeFromCart(id) {
-
+//Show Cart Content
+function showCartContent(btn) {
+  btn.addEventListener('click', function () {
+    toggleCart('visible', 'translateX(0)');
+    const carts = new UI();
+    cartContent.innerHTML = carts.displayCart(Storage.getCartStorage());
+    const sum = Storage.getCartStorage().reduce((a, c) => {
+      return a + c.price * c.count;
+    }, 0);
+    cartTotal.innerHTML = sum.toFixed(2);
+  });
 }
 
+//DOMContentLoader
 document.addEventListener('DOMContentLoaded', () => {
   const ui = new UI();
   const products = new Products();
@@ -115,57 +124,113 @@ document.addEventListener('DOMContentLoaded', () => {
     Storage.setCartStorage([]);
   }
   
-  products.getProducts().then(products => {
-    productsDOM.innerHTML = ui.displayProducts(products);
-
-    Storage.setProductsStorage(products);
-
-    cartItems.innerHTML = Storage.getCartStorage().length;
-    
-
-    const bagBtns = document.querySelectorAll(".bag-btn");
-    let cartStorage = Storage.getCartStorage();
-
-    bagBtns.forEach(bagBtn => {
-      bagBtn.addEventListener("click", (e) => {
-        const id = e.target.dataset.id;
-        const item = Storage.getCartStorage().find((p) => p.id == id);
-        if(!item) {
-          const cart =  Storage.getProductsStorage().find(c => c.id == id);
-          console.log(cart);
-          cartStorage = [ ...cartStorage, cart];
-          Storage.setCartStorage(cartStorage);
-          cartItems.innerHTML = Storage.getCartStorage().length;
-          e.target.disabled = true;
-        }
-
-        e.target.innerHTML = "In Cart";
-      })
-    });
-
-    //Show Cart Content
-    cartBtn.addEventListener('click', function () {
-      toggleCart("visible", "translateX(0)");
-      const carts = new UI();
-      cartContent.innerHTML = carts.displayCart(cartStorage);
-
-      console.log(carts.displayCart(cartStorage))
-    });
-
-    //Close Cart Content
-    closeCartBtn.addEventListener("click", function() {
-      toggleCart('hidden', 'translateX(100%)');
-    });
-
-    //Romove Product from cart
-
+  products.getProducts()
+    .then((products) => {
+      productsDOM.innerHTML = ui.displayProducts(products);
+      Storage.setProductsStorage(products);
+      cartItems.innerHTML = Storage.getCartStorage().length;
+      const bagBtns = document.querySelectorAll('.bag-btn');
      
+      bagBtns.forEach((bagBtn) => {
+        bagBtn.addEventListener('click', (e) => {
+          const id = e.target.dataset.id;
+          const item = Storage.getCartStorage().find((p) => p.id == id);
+          if (!item) {
 
+            let cartStorage = Storage.getCartStorage();
+            const cart = Storage.getProductsStorage().find((c) => c.id == id);
+            //test
+            cart.count = 1;
+            cartStorage = [...cartStorage, cart];
+            Storage.setCartStorage(cartStorage);
+            cartItems.innerHTML = Storage.getCartStorage().length;
+            e.target.disabled = true;
+          }
 
+          e.target.innerHTML = 'In Cart';
+        });
+      });
 
-     
+      //Show Cart Content
+      showCartContent(cartBtn);
+      
+      //Close Cart Content
+      closeCartBtn.addEventListener('click', function () {
+        toggleCart('hidden', 'translateX(100%)');
+      });
 
+      //navIcon by showing
+      showCartContent(navIcon);
 
+    });
 
-  });
+    cartContent.innerHTML = new UI().displayCart(Storage.getCartStorage());
 });
+
+cartOverLay.addEventListener("click", function(e){
+  //remove item
+  if (e.target.classList.contains('remove-item')) {
+    const id = e.target.dataset.id;
+    const cart = Storage.getCartStorage().filter((c) => c.id != id);
+    cartContent.innerHTML = new UI().displayCart(cart);
+    Storage.setCartStorage(cart);
+    cartItems.innerHTML = Storage.getCartStorage().length;
+
+    const sum = Storage.getCartStorage().reduce((a, c) => {
+      return a + (c.price * c.count);
+    }, 0);
+    cartTotal.innerHTML = sum.toFixed(2);
+  }
+
+  //Clear Cart
+  if(e.target.classList.contains("clear-cart")) {
+    Storage.setCartStorage([]);
+    cartContent.innerHTML="";
+    cartTotal.innerHTML = Number("0").toFixed(2);
+    cartItems.innerHTML = Storage.getCartStorage().length;
+  }
+
+  if(e.target.classList.contains("fa-chevron-up")) {
+    const id = e.target.parentNode.dataset.item;
+    const itemAmount = e.target.parentNode.querySelector('.item-amount');
+    const cartStore = Storage.getCartStorage();
+    cartStore.forEach((item, ind) => {
+
+      if(item.id == id) {
+        cartStore[ind].count++;
+        itemAmount.innerHTML = cartStore[ind].count;
+        const sum = cartStore.reduce((a, c) => {
+          return a + (c.price * c.count);
+        }, 0);
+        cartTotal.innerHTML = sum.toFixed(2);
+        console.log(cartStore[ind].count);
+        Storage.setCartStorage(cartStore);
+      }
+    })
+  }
+
+  if (e.target.classList.contains('fa-chevron-down')) {
+    const id = e.target.parentNode.dataset.item;
+    const itemAmount = e.target.parentNode.querySelector('.item-amount');
+    const cartStore = Storage.getCartStorage();
+    cartStore.forEach((item, ind) => {
+      if (item.id == id) {
+        (cartStore[ind].count > 1) 
+        ? cartStore[ind].count--
+        : cartStore[ind].count;
+        itemAmount.innerHTML = cartStore[ind].count;
+        const sum = cartStore.reduce((a, c) => {
+          return a + c.price * c.count;
+        }, 0);
+        cartTotal.innerHTML = sum.toFixed(2);
+        console.log(cartStore[ind].count);
+        Storage.setCartStorage(cartStore);
+      }
+    });
+  }
+
+});
+
+
+
+
