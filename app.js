@@ -8,7 +8,7 @@ const cartTotal = document.querySelector('.cart-total');
 const productsDOM = document.querySelector('.products-center');
 const cartContent = document.querySelector('.cart-content');
 const navIcon = document.querySelector('.nav-icon');
-
+ 
 //get products
 class Products {
   async getProducts() {
